@@ -1,0 +1,43 @@
+#!/bin/bash
+
+LIVEDIR="/etc/letsencrypt/live"
+
+for DOMAIN in $RENEWED_DOMAINS; do
+
+	echo "Processing domain '$DOMAIN'" ...
+	DCONF="/etc/letsencrypt/deploy/${DOMAIN}.conf"
+
+	if [ -e "$DCONF" ] ; then
+
+		SERVER=
+		USER=
+		KEYFILE=
+		PORT=
+		. "${DCONF}"
+
+		if [ -z "$PORT" ] ; then
+			PORT=22
+		fi
+
+		if [ ! -z "${SERVER}" -a ! -z "$USER" -a ! -z "$KEYFILE" ] ; then
+
+			BN="$(basename "$FILE")"
+		
+			# update perms
+			chmod 0600 "${LIVEDIR}/${DOMAIN}"/*
+
+			# copy the key files over
+			scp -r -p -P $PORT -i "$KEYFILE"  "${LIVEDIR}/${DOMAIN}"   ${USER}@${SERVER}:/home/${USER}/domains/
+		
+			# touch a file to indicate to the destination server that it can now apply the certificate update
+			ssh -p  $PORT -i "$KEYFILE"  ${USER}@${SERVER} touch /home/${USER}/domains/${DOMAIN}/new
+
+		else
+
+			echo "Some required variables not set in config file '$DCONF'; Can not continue."
+
+		fi
+
+	fi
+
+done

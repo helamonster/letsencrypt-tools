@@ -1,0 +1,50 @@
+#!/bin/bash
+
+
+# check for certs that are ready to be updated:
+for FILE in $(ls -1 /home/le/domains/*/new 2>/dev/null) ; do
+
+#	echo "File: $FILE"
+	DIR="$(dirname "$FILE")"
+	DOMAIN="$(basename "$(dirname "$FILE")")"
+
+	echo "New SSL certificate found for the following domain: '$DOMAIN'"
+
+	if [ -e "$DIR/fullchain.pem" -a -e "$DIR/chain.pem" -a -e "$DIR/privkey.pem" -a -e "$DIR/cert.pem" ] ; then
+
+		echo "Updating SSL certificate for the following domain: '$DOMAIN' ..."
+
+		mkdir -p "/etc/ssl/${DOMAIN}/"
+
+#		echo "$DIR/fullchain.pem"
+		cp "$DIR/fullchain.pem" /etc/ssl/${DOMAIN}/
+
+#		echo "$DIR/chain.pem"
+		cp "$DIR/chain.pem" /etc/ssl/${DOMAIN}/
+
+#		echo "$DIR/privkey.pem"
+		cp "$DIR/privkey.pem" /etc/ssl/${DOMAIN}/
+
+#		echo "$DIR/cert.pem"
+		cp "$DIR/cert.pem" /etc/ssl/${DOMAIN}/
+
+		echo Done
+
+		echo "Reloading httpd..."
+		/sbin/service httpd reload
+		RES=$?
+		if [ $RES -ne 0 ] ; then
+			echo "Reload failed, please manually check"
+		else
+			echo Done
+		fi
+
+		echo "Removing indicator file..."
+		rm -f "$FILE"
+		echo Done
+
+
+	fi
+
+done
+
